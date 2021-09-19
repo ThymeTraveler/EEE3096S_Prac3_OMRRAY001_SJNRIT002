@@ -7,8 +7,11 @@ import time
 
 # some global variables that need to change as we run the program
 end_of_game = None  # set if the user wins or ends the game
-number_correct = 0
 number_displayed=0
+number_correct=0
+BuzzerPwm = None
+LEDPwm=None
+
 
 # DEFINE THE PINS USED HERE
 LED_value = [11, 13, 15]
@@ -64,24 +67,44 @@ def display_scores(count, raw_data):
     # print out the scores in the required format
     pass
 
+def joepapa():
+    print("joe papa")
+    pass
+
+def joemama():
+    print("joemama")
+    pass
 
 # Setup Pins
 def setup():
+    global LEDPwm, BuzzerPwm
+    
     # Setup board mode
     GPIO.setmode(GPIO.BOARD)
+   
     # Setup regular GPIO
     GPIO.setup(LED_value[0], GPIO.OUT)#LED
     GPIO.setup(LED_value[1], GPIO.OUT)#LED
     GPIO.setup(LED_value[2], GPIO.OUT)#LED
+    GPIO.setup(32,GPIO.OUT)#PWM LED
+    GPIO.setup(33,GPIO.OUT) #PWM BUZZER
     # Setup PWM channels
-    LEDPwm = GPIO.PWM(32, 1000)
-    BuzzerPwm = GPIO.PWM(33, 1000)
-    # Setup debouncing and callbacks
-    GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #BUTTON
-    GPIO.setup(btn_submit, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #BUTTON
-    GPIO.add_event_detect(btn_increase, GPIO.RISING, callback=btn_increase_pressed(btn_increase), bouncetime=200) #DEBOUNCE + callback
-    GPIO.add_event_detect(btn_submit, GPIO.RISING, callback=btn_guess_pressed(btn_submit), bouncetime=200) #DEBOUNCE + callback
+    if LEDPwm is None:
+        LEDPwm = GPIO.PWM(32, 1000)
+    if BuzzerPwm is None:
+        BuzzerPwm = GPIO.PWM(33, 1000)
 
+    LEDPwm.start(0)
+    BuzzerPwm.start(0)
+    
+    # Setup debouncing and callbacks
+    GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
+    GPIO.setup(btn_submit, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
+
+    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed(btn_increase), bouncetime=200) #DEBOUNCE + callback
+    
+    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed(btn_submit), bouncetime=200) #DEBOUNCE + callback
+    
 
 
     pass
@@ -119,44 +142,46 @@ def btn_increase_pressed(channel):
     # Increase the value shown on the LEDs
     # You can choose to have a global variable store the user's current guess, 
     # or just pull the value off the LEDs when a user makes a guess
-    number_displayed++
+    global number_displayed
+
+    number_displayed+=1
     if number_displayed==8:
         number_displayed=0
 
     if number_displayed==0:
         GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.LOW)
-    elif number_displayed==1
+        GPIO.output(LED_value[1],GPIO.LOW)
+        GPIO.output(LED_value[2],GPIO.LOW)
+    elif number_displayed==1:
         GPIO.output(LED_value[0],GPIO.HIGH)
+        GPIO.output(LED_value[1],GPIO.LOW)
+        GPIO.output(LED_value[2],GPIO.LOW)
+    elif number_displayed==2:
         GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.LOW)
-    elif number_displayed==2
-        GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.LOW)
-    elif number_displayed==3
+        GPIO.output(LED_value[1],GPIO.LOW)
+        GPIO.output(LED_value[2],GPIO.LOW)
+    elif number_displayed==3:
         GPIO.output(LED_value[0],GPIO.HIGH)
-        GPIO.output(LED_value[0],GPIO.HIGH)
+        GPIO.output(LED_value[1],GPIO.HIGH)
+        GPIO.output(LED_value[2],GPIO.LOW)
+    elif number_displayed==4:
         GPIO.output(LED_value[0],GPIO.LOW)
-    elif number_displayed==4
+        GPIO.output(LED_value[1],GPIO.LOW)
+        GPIO.output(LED_value[2],GPIO.HIGH)
+    elif number_displayed==5:
+        GPIO.output(LED_value[0],GPIO.HIGH)
+        GPIO.output(LED_value[1],GPIO.LOW)
+        GPIO.output(LED_value[2],GPIO.HIGH)
+    elif number_displayed==6:
         GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.LOW)
+        GPIO.output(LED_value[1],GPIO.HIGH)
+        GPIO.output(LED_value[2],GPIO.HIGH)
+    elif number_displayed==7:
         GPIO.output(LED_value[0],GPIO.HIGH)
-    elif number_displayed==5
-        GPIO.output(LED_value[0],GPIO.HIGH)
-        GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.HIGH)
-    elif number_displayed==6
-        GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[0],GPIO.HIGH)
-        GPIO.output(LED_value[0],GPIO.HIGH
-    elif number_displayed==7
-        GPIO.output(LED_value[0],GPIO.HIGH)
-        GPIO.output(LED_value[0],GPIO.HIGH)
-        GPIO.output(LED_value[0],GPIO.HIGH)
+        GPIO.output(LED_value[1],GPIO.HIGH)
+        GPIO.output(LED_value[2],GPIO.HIGH)
         
-        
+    print("increase button")    
         
     pass
 
@@ -165,6 +190,8 @@ def btn_increase_pressed(channel):
 def btn_guess_pressed(channel):
     # If they've pressed and held the button, clear up the GPIO and take them back to the menu screen
     # Compare the actual value with the user value displayed on the LEDs
+    global number_displayed, LEDPwm, BuzzerPwm
+    
     correctness=0
     diff=abs(number_displayed-number_correct)
     if number_displayed<number_correct :
@@ -177,14 +204,15 @@ def btn_guess_pressed(channel):
     trigger_buzzer(diff)
     # if it's an exact guess:
     # - Disable LEDs and Buzzer
-        LEDPwm.stop()
-        BuzzerPwm.stop()
+    LEDPwm.stop()
+    BuzzerPwm.stop()
     # - tell the user and prompt them for a name
     name=input("Howsit bru u won - tell me your name")
     # - fetch all the scores
     # - add the new score
     # - sort the scores
     # - Store the scores back to the EEPROM, being sure to update the score count
+    print("guess button")
     pass
 
 
@@ -194,7 +222,9 @@ def accuracy_leds(correctness):
     # - The % brightness should be directly proportional to the % "closeness"
     # - For example if the answer is 6 and a user guesses 4, the brightness should be at 4/6*100 = 66%
     # - If they guessed 7, the brightness would be at ((8-7)/(8-6)*100 = 50%
+    global LEDPwm
     LEDPwm.ChangeDutyCycle(correctness)
+    print("LED ACCURACY")
     pass
 
 # Sound Buzzer
@@ -211,9 +241,8 @@ def trigger_buzzer(diff):
         BuzzerPwm.start()
         time.sleep(1000)
         BuzzerPwm.stop()
-    
+    print("triggered")
     pass
-
 
 
 
@@ -222,6 +251,7 @@ if __name__ == "__main__":
     try:
         # Call setup function
         setup()
+      
         welcome()
         while True:
             menu()
