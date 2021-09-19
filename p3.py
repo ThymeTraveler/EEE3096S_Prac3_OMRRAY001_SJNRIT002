@@ -101,9 +101,9 @@ def setup():
     GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
     GPIO.setup(btn_submit, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
 
-    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed(btn_increase), bouncetime=200) #DEBOUNCE + callback
+    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed, bouncetime=200) #DEBOUNCE + callback
     
-    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed(btn_submit), bouncetime=200) #DEBOUNCE + callback
+    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed, bouncetime=200) #DEBOUNCE + callback
     
 
 
@@ -158,7 +158,7 @@ def btn_increase_pressed(channel):
         GPIO.output(LED_value[2],GPIO.LOW)
     elif number_displayed==2:
         GPIO.output(LED_value[0],GPIO.LOW)
-        GPIO.output(LED_value[1],GPIO.LOW)
+        GPIO.output(LED_value[1],GPIO.HIGH)
         GPIO.output(LED_value[2],GPIO.LOW)
     elif number_displayed==3:
         GPIO.output(LED_value[0],GPIO.HIGH)
