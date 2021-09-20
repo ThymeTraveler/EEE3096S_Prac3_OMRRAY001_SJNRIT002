@@ -68,14 +68,6 @@ def display_scores(count, raw_data):
     # print out the scores in the required format
     pass
 
-def joepapa():
-    print("joe papa")
-    pass
-
-def joemama():
-    print("joemama")
-    pass
-
 # Setup Pins
 def setup():
     global LEDPwm, BuzzerPwm
@@ -91,10 +83,10 @@ def setup():
     GPIO.setup(33,GPIO.OUT) #PWM BUZZER
     # Setup PWM channels
     if LEDPwm is None:
-        LEDPwm = GPIO.PWM(32, 100000)
+        LEDPwm = GPIO.PWM(32, 1000)
     if BuzzerPwm is None:
         BuzzerPwm = GPIO.PWM(33, 1000)
-
+    LEDPwm.start(0)
     
     # Setup debouncing and callbacks
     GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
@@ -182,7 +174,6 @@ def btn_increase_pressed(channel):
         GPIO.output(LED_value[1],GPIO.HIGH)
         GPIO.output(LED_value[2],GPIO.HIGH)
         
-    print("increase button")    
         
     pass
 
@@ -193,17 +184,17 @@ def btn_guess_pressed(channel):
     # Compare the actual value with the user value displayed on the LEDs
     global number_displayed, LEDPwm, BuzzerPwm,number_correct
     
-    correctness=0
+    LED_DutyCycle=0
     currentlypressed=GPIO.input(btn_submit)
     if currentlypressed==0:
-        print("number displayed: " + str(number_displayed))
+    
         diff=abs(number_displayed-number_correct)
         if number_displayed<number_correct :
-            correctness=100*number_displayed/number_correct
+            LED_DutyCycle=100*number_displayed/number_correct
         else:
-            correctness=100*diff/8
+            LED_DutyCycle=100*diff/8
         # Change the PWM LED
-        accuracy_leds(correctness)
+        accuracy_leds(LED_DutyCycle)
         # if it's close enough, adjust the buzzer
         trigger_buzzer(diff)
         # if it's an exact guess:
@@ -217,19 +208,19 @@ def btn_guess_pressed(channel):
             # - add the new score
             # - sort the scores
             # - Store the scores back to the EEPROM, being sure to update the score count
-        print("guess button")
     pass
 
 
 # LED Brightness
-def accuracy_leds(correctness):
+def accuracy_leds(LED_DutyCycle):
     # Set the brightness of the LED based on how close the guess is to the answer
     # - The % brightness should be directly proportional to the % "closeness"
     # - For example if the answer is 6 and a user guesses 4, the brightness should be at 4/6*100 = 66%
     # - If they guessed 7, the brightness would be at ((8-7)/(8-6)*100 = 50%
     global LEDPwm
-    LEDPwm.ChangeDutyCycle(correctness)
-    print("LED ACCURACY")
+    GPIO.output(32,GPIO.HIGH)
+    LEDPwm.ChangeDutyCycle(LED_DutyCycle)
+    
     pass
 
 # Sound Buzzer
@@ -240,19 +231,18 @@ def trigger_buzzer(diff):
     # If the user is off by an absolute value of 3, the buzzer should sound once every second
     # If the user is off by an absolute value of 2, the buzzer should sound twice every second
     # If the user is off by an absolute value of 1, the buzzer should sound 4 times a second
-    print("partially triggered")
     BuzzerPwm.ChangeDutyCycle(50)
-    freq=(2**abs(3-diff)
-    BuzzerPwm.ChangeFrequency(2**abs(3-diff))
-    if diff<=3:
-        GPIO.output(33,GPIO.HIGH)
-        BuzzerPwm.start(0)
-        time.sleep(1)
-        BuzzerPwm.stop(0)
-        GPIO.output(33,GPIO.LOW)
+    freq=(2**(abs(3-diff)))
+    BuzzerPwm.ChangeFrequency(100)
+    if diff<=3 and diff>0:
+        for I in range(freq):
+            GPIO.output(33,GPIO.HIGH)
+            BuzzerPwm.start(0)
+            time.sleep(1/freq)
+            BuzzerPwm.stop(0)
+           # GPIO.output(33,GPIO.LOW)
 
     GPIO.output(33,GPIO.LOW)
-    print("triggered")
     pass
 
 
