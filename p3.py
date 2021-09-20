@@ -37,7 +37,7 @@ def welcome():
 
 # Print the game menu
 def menu():
-    global end_of_game
+    global end_of_game, number_correct
     option = input("Select an option:   H - View High Scores     P - Play Game       Q - Quit\n")
     option = option.upper()
     if option == "H":
@@ -52,6 +52,7 @@ def menu():
         print("Press and hold the guess button to cancel your game")
         value = generate_number()
         number_correct=value
+        print(number_correct)
         while not end_of_game:
             pass
     elif option == "Q":
@@ -90,12 +91,10 @@ def setup():
     GPIO.setup(33,GPIO.OUT) #PWM BUZZER
     # Setup PWM channels
     if LEDPwm is None:
-        LEDPwm = GPIO.PWM(32, 1000)
+        LEDPwm = GPIO.PWM(32, 100000)
     if BuzzerPwm is None:
         BuzzerPwm = GPIO.PWM(33, 1000)
 
-    LEDPwm.start(0)
-    BuzzerPwm.start(0)
     
     # Setup debouncing and callbacks
     GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
@@ -142,11 +141,13 @@ def btn_increase_pressed(channel):
     # Increase the value shown on the LEDs
     # You can choose to have a global variable store the user's current guess, 
     # or just pull the value off the LEDs when a user makes a guess
-    global number_displayed
+    currentlypressed=GPIO.input(btn_increase)
 
-    number_displayed+=1
-    if number_displayed==8:
-        number_displayed=0
+    global number_displayed
+    if  currentlypressed==0:
+        number_displayed+=1
+        if number_displayed==8:
+            number_displayed=0
 
     if number_displayed==0:
         GPIO.output(LED_value[0],GPIO.LOW)
@@ -190,29 +191,33 @@ def btn_increase_pressed(channel):
 def btn_guess_pressed(channel):
     # If they've pressed and held the button, clear up the GPIO and take them back to the menu screen
     # Compare the actual value with the user value displayed on the LEDs
-    global number_displayed, LEDPwm, BuzzerPwm
+    global number_displayed, LEDPwm, BuzzerPwm,number_correct
     
     correctness=0
-    diff=abs(number_displayed-number_correct)
-    if number_displayed<number_correct :
-        correctness=100*number_displayed/number_correct
-    else:
-        correctness=100*diff/8
-    # Change the PWM LED
-    accuracy_leds(correctness)
-    # if it's close enough, adjust the buzzer
-    trigger_buzzer(diff)
-    # if it's an exact guess:
-    # - Disable LEDs and Buzzer
-    LEDPwm.stop()
-    BuzzerPwm.stop()
-    # - tell the user and prompt them for a name
-    name=input("Howsit bru u won - tell me your name")
-    # - fetch all the scores
-    # - add the new score
-    # - sort the scores
-    # - Store the scores back to the EEPROM, being sure to update the score count
-    print("guess button")
+    currentlypressed=GPIO.input(btn_submit)
+    if currentlypressed==0:
+        print("number displayed: " + str(number_displayed))
+        diff=abs(number_displayed-number_correct)
+        if number_displayed<number_correct :
+            correctness=100*number_displayed/number_correct
+        else:
+            correctness=100*diff/8
+        # Change the PWM LED
+        accuracy_leds(correctness)
+        # if it's close enough, adjust the buzzer
+        trigger_buzzer(diff)
+        # if it's an exact guess:
+        # - Disable LEDs and Buzzer
+        if number_displayed==number_correct:
+            LEDPwm.stop(0)
+            BuzzerPwm.stop(0)
+            # - tell the user and prompt them for a name
+            name=input("Howsit bru u won - tell me your name")
+            # - fetch all the scores
+            # - add the new score
+            # - sort the scores
+            # - Store the scores back to the EEPROM, being sure to update the score count
+        print("guess button")
     pass
 
 
@@ -235,12 +240,18 @@ def trigger_buzzer(diff):
     # If the user is off by an absolute value of 3, the buzzer should sound once every second
     # If the user is off by an absolute value of 2, the buzzer should sound twice every second
     # If the user is off by an absolute value of 1, the buzzer should sound 4 times a second
+    print("partially triggered")
     BuzzerPwm.ChangeDutyCycle(50)
+    freq=(2**abs(3-diff)
     BuzzerPwm.ChangeFrequency(2**abs(3-diff))
     if diff<=3:
-        BuzzerPwm.start()
-        time.sleep(1000)
-        BuzzerPwm.stop()
+        GPIO.output(33,GPIO.HIGH)
+        BuzzerPwm.start(0)
+        time.sleep(1)
+        BuzzerPwm.stop(0)
+        GPIO.output(33,GPIO.LOW)
+
+    GPIO.output(33,GPIO.LOW)
     print("triggered")
     pass
 
