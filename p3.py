@@ -12,6 +12,8 @@ number_correct=0
 BuzzerPwm = None
 LEDPwm=None
 score =0
+name =""
+count=0
 
 
 # DEFINE THE PINS USED HERE
@@ -38,13 +40,14 @@ def welcome():
 
 # Print the game menu
 def menu():
-    global end_of_game, number_correct
+    global end_of_game, number_correct,count
     option = input("Select an option:   H - View High Scores     P - Play Game       Q - Quit\n")
     option = option.upper()
     if option == "H":
         os.system('clear')
         print("HIGH SCORES!!")
         s_count, ss = fetch_scores()
+        count=s_count
         display_scores(s_count, ss)
     elif option == "P":
         os.system('clear')
@@ -66,7 +69,9 @@ def menu():
 def display_scores(count, raw_data):
     # print the scores to the screen in the expected format
     print("There are {} scores. Here are the top 3!".format(count))
-    # print out the scores in the required format
+    # print out the scores in the required format  
+    raw_data.sort(key=lambda x: x[1])
+    print(raw_data)
     pass
 
 # Setup Pins
@@ -105,19 +110,45 @@ def setup():
 # Load high scores
 def fetch_scores():
     # get however many scores there are
-    score_count = None
+    score_count = eeprom.read_byte(0)
+    scores = eeprom.read_block(1,4*score_count)
     # Get the scores
-    
+
+    global name,score
+
     # convert the codes back to ascii
-    
+    for i in range(len(scores)):
+        if (i+1)%4 != 0:
+            scores[i] = chr(scores[i])
+
+
+    ZeroTwoArray=[]
+    for I in range(0,score_count*4-1,4):
+        ZeroTwoArray.append([scores[I-4]+scores[I-3]+scores[I-2],scores[I-1]])
+    #ZeroTwoArray.sort(key=lambda x: x[1])    
     # return back the results
-    return score_count, scores
+    return score_count, ZeroTwoArray
 
 
 # Save high scores
 def save_scores():
+    global score,name
     # fetch scores
+    count, scores = fetch_scores()
     # include new score
+    count+=1
+    eeprom.write_byte(0,count)
+    scores.append([name,score])
+    print(scores)
+    scores.sort(key=lambda x: x[1])
+    for i, score in enumerate(scores):
+        data_to_write = []
+        # get the string
+        for letter in score[0]:
+            data_to_write.append(ord(letter))
+        data_to_write.append(score[1])
+        eeprom.write_block(i+1, data_to_write)
+
     # sort
     # update total amount of scores
     # write new scores
@@ -183,7 +214,7 @@ def btn_increase_pressed(channel):
 def btn_guess_pressed(channel):
     # If they've pressed and held the button, clear up the GPIO and take them back to the menu screen
     # Compare the actual value with the user value displayed on the LEDs
-    global number_displayed, LEDPwm, BuzzerPwm,number_correct, score
+    global number_displayed, LEDPwm, BuzzerPwm,number_correct, score,name
     
     LED_DutyCycle=0
     currentlypressed=GPIO.input(btn_submit)
@@ -232,6 +263,7 @@ def btn_guess_pressed(channel):
             GPIO.output(LED_value[2],GPIO.LOW)
             # - tell the user and prompt them for a name
             name=input("Howsit bru u won! It took you " + str(score) +" guesses- tell me your name: ")
+            save_scores()
             GPIO.cleanup()
             setup()
             welcome()
