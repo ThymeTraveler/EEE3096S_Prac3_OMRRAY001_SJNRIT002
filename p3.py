@@ -11,6 +11,7 @@ number_displayed=0
 number_correct=0
 BuzzerPwm = None
 LEDPwm=None
+score =0
 
 
 # DEFINE THE PINS USED HERE
@@ -70,8 +71,8 @@ def display_scores(count, raw_data):
 
 # Setup Pins
 def setup():
-    global LEDPwm, BuzzerPwm
-    
+    global LEDPwm, BuzzerPwm, score
+    score=0
     # Setup board mode
     GPIO.setmode(GPIO.BOARD)
    
@@ -182,7 +183,7 @@ def btn_increase_pressed(channel):
 def btn_guess_pressed(channel):
     # If they've pressed and held the button, clear up the GPIO and take them back to the menu screen
     # Compare the actual value with the user value displayed on the LEDs
-    global number_displayed, LEDPwm, BuzzerPwm,number_correct
+    global number_displayed, LEDPwm, BuzzerPwm,number_correct, score
     
     LED_DutyCycle=0
     currentlypressed=GPIO.input(btn_submit)
@@ -209,7 +210,7 @@ def btn_guess_pressed(channel):
 
         
 
-
+        score+=1
         diff=abs(number_displayed-number_correct)
         if number_displayed<number_correct :
             LED_DutyCycle=100*number_displayed/number_correct
@@ -224,8 +225,17 @@ def btn_guess_pressed(channel):
         if number_displayed==number_correct:
             LEDPwm.stop(0)
             BuzzerPwm.stop(0)
+            GPIO.remove_event_detect(btn_increase)
+            GPIO.remove_event_detect(btn_submit)
+            GPIO.output(LED_value[0],GPIO.LOW)
+            GPIO.output(LED_value[1],GPIO.LOW)
+            GPIO.output(LED_value[2],GPIO.LOW)
             # - tell the user and prompt them for a name
-            name=input("Howsit bru u won - tell me your name")
+            name=input("Howsit bru u won! It took you " + str(score) +" guesses- tell me your name: ")
+            GPIO.cleanup()
+            setup()
+            welcome()
+            menu()
             # - fetch all the scores
             # - add the new score
             # - sort the scores
