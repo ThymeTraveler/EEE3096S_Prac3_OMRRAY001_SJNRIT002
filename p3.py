@@ -92,9 +92,9 @@ def setup():
     GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
     GPIO.setup(btn_submit, GPIO.IN, pull_up_down=GPIO.PUD_UP) #BUTTON
 
-    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed, bouncetime=200) #DEBOUNCE + callback
+    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed, bouncetime=200) #DEBOUNCE + callback + interupt
     
-    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed, bouncetime=200) #DEBOUNCE + callback
+    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed, bouncetime=200) #DEBOUNCE + callback +interrupt
     
 
 
@@ -134,7 +134,7 @@ def btn_increase_pressed(channel):
     # You can choose to have a global variable store the user's current guess, 
     # or just pull the value off the LEDs when a user makes a guess
     currentlypressed=GPIO.input(btn_increase)
-
+    
     global number_displayed
     if  currentlypressed==0:
         number_displayed+=1
@@ -187,7 +187,29 @@ def btn_guess_pressed(channel):
     LED_DutyCycle=0
     currentlypressed=GPIO.input(btn_submit)
     if currentlypressed==0:
-    
+        start_time=time.time()
+
+        while GPIO.input(btn_submit)==GPIO.LOW:
+            pass
+        
+        if time.time()-start_time>=1:
+            GPIO.remove_event_detect(btn_increase)
+            GPIO.remove_event_detect(btn_submit)
+            GPIO.output(LED_value[0],GPIO.LOW)
+            GPIO.output(LED_value[1],GPIO.LOW)
+            GPIO.output(LED_value[2],GPIO.LOW)
+            GPIO.cleanup()
+            setup()
+            welcome()
+            menu()
+            
+                
+
+
+
+        
+
+
         diff=abs(number_displayed-number_correct)
         if number_displayed<number_correct :
             LED_DutyCycle=100*number_displayed/number_correct
